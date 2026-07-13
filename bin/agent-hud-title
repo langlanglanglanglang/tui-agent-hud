@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# cc-hud-title — 底栏概览。输出当前 active window 的「<红绿灯> <base> · <标题>」。
+# agent-hud-title — 底栏概览。输出当前 active window 的「<红绿灯> <base> · <标题>」。
 #
-# 红绿灯 + base 来自 window_name（cc-watch 维护，稳定）。
+# 红绿灯 + base 来自 window_name（agent-watch 维护，稳定）。
 # 标题三级回退：
-#   1) 标题缓存 $XDG_CACHE_HOME/cc-window-hud/title/<base>.txt
+#   1) 标题缓存 $XDG_CACHE_HOME/tui-agent-hud/title/<base>.txt
 #      —— 约定目录：任何集成方都可往里写真实标题（如 cyj-todo 写飞书任务标题）
 #   2) claude/codex 的 pane_title（去掉前导 spinner 字形）
 #
 # 用于 tmux status-right：
-#   set -g status-right ' #(~/WorkSpace/cc-window-hud/bin/cc-hud-title) '
+#   set -g status-right ' #(~/WorkSpace/tui-agent-hud/bin/agent-hud-title) '
 #   set -g status-interval 5
-STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/cc-window-hud"
+STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tui-agent-hud"
 TITLE_DIR="$STATE_DIR/title"
 
 # $1 仅供调试（模拟 window_name）；正常由 tmux 对当前 active window 求值

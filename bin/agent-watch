@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# cc-watch — 单窗自监听（去中心化）。
+# agent-watch — 单窗自监听（去中心化）。
 #
-# 每个 Claude Code / Codex 交互窗口旁挂一个 cc-watch，**只盯自己这一个 pane**：
+# 每个 Claude Code / Codex 交互窗口旁挂一个 agent-watch，**只盯自己这一个 pane**：
 #   - capture 自己 → 判 🟢在跑 / 🟡等输入 / 🔴卡住 → rename 自己的 window
 #   - 自己的 pane 关闭 → 自动退出（无孤儿、无跨窗、无抢名）
 #
@@ -9,18 +9,18 @@
 # 所以多窗并存时天然零冲突（每个只动自己的 window_name）。
 #
 # 用法：
-#   cc-watch [pane_id]          # 缺省用 $TMUX_PANE（由启动它的窗口注入）
+#   agent-watch [pane_id]          # 缺省用 $TMUX_PANE（由启动它的窗口注入）
 # 环境变量：
 #   CC_HUD_INTERVAL   轮询间隔秒，默认 4
 #   CC_HUD_AGENT      claude | codex | auto，默认 auto（按 pane_current_command 猜）
 set -uo pipefail
 
 PANE="${1:-${TMUX_PANE:-}}"
-[ -z "$PANE" ] && { echo "cc-watch: 无 pane（设 \$TMUX_PANE 或传 pane id）" >&2; exit 1; }
+[ -z "$PANE" ] && { echo "agent-watch: 无 pane（设 \$TMUX_PANE 或传 pane id）" >&2; exit 1; }
 
 INTERVAL="${CC_HUD_INTERVAL:-4}"
 AGENT="${CC_HUD_AGENT:-auto}"
-STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/cc-window-hud"
+STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tui-agent-hud"
 PID_DIR="$STATE_DIR/pid"
 mkdir -p "$PID_DIR"
 
@@ -85,7 +85,7 @@ while tmux display-message -t "$PANE" -p '#{pane_id}' >/dev/null 2>&1; do
   name=$(tmux display-message -t "$PANE" -p '#{window_name}' 2>/dev/null) || break
   # 剥前导字形 + 取核心 base（兼容历史 base·xxx 格式）
   base=$(printf '%s' "$name" | sed -E 's/^[🟢🟡🔴][[:space:]]+//; s/·.*//')
-  # 对本窗刷红绿灯。cc-watch 由 wrapper 只在 cc/codex 窗启动，故无需再按窗名过滤——
+  # 对本窗刷红绿灯。agent-watch 由 wrapper 只在 cc/codex 窗启动，故无需再按窗名过滤——
   # 不管窗叫 task-XXXX 还是 workflow / memory 等自定义名，都在原 base 前加/换字形。
   if [ -n "$base" ]; then
     ag=$(pick_agent)

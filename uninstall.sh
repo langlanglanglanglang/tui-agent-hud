@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# cc-window-hud 卸载器：撤 tmux 底栏 + shell wrapper，停所有 cc-watch，清运行态缓存。
+# tui-agent-hud 卸载器：撤 tmux 底栏 + shell wrapper，停所有 agent-watch，清运行态缓存。
 set -uo pipefail
 
-MARK=">>> cc-window-hud >>>"
-MARKEND="<<< cc-window-hud <<<"
-STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/cc-window-hud"
+MARK=">>> tui-agent-hud >>>"
+MARKEND="<<< tui-agent-hud <<<"
+STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tui-agent-hud"
 
 strip_block() {
   local f="$1"; [ -f "$f" ] || return 0
@@ -16,9 +16,9 @@ for f in "$HOME/.tmux.conf" "${ZDOTDIR:-$HOME}/.zshrc" "$HOME/.bashrc" "$HOME/.p
   strip_block "$f"
 done
 
-# 停所有 cc-watch 进程
+# 停所有 agent-watch 进程
 pkill -f "$STATE_DIR" 2>/dev/null || true
-pkill -f 'cc-watch'   2>/dev/null || true
+pkill -f 'agent-watch'   2>/dev/null || true
 rm -rf "$STATE_DIR/pid"
 
 # 复位 tmux 底栏（清 status-right 里的脚本调用）
@@ -30,6 +30,6 @@ if [ -n "${TMUX:-}" ]; then
   tmux set-hook -gu pane-focus-in       2>/dev/null || true
 fi
 
-echo "✅ 已卸载 cc-window-hud（tmux 底栏 + wrapper 已撤，watcher 已停）"
+echo "✅ 已卸载 tui-agent-hud（tmux 底栏 + wrapper 已撤，watcher 已停）"
 echo "→ 标题缓存保留在 $STATE_DIR/title（如需清：rm -rf \"$STATE_DIR\"）"
 echo "→ 当前 shell 里 wrapper 函数仍在，重开 shell 或 unset -f claude codex 清除"

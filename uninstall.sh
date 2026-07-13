@@ -25,6 +25,9 @@ rm -rf "$STATE_DIR/pid"
 if [ -n "${TMUX:-}" ]; then
   tmux set -gu status-right 2>/dev/null || true
   tmux set -gu status-interval 2>/dev/null || true
+  tmux set-hook -gu after-new-window    2>/dev/null || true
+  tmux set-hook -gu after-select-window 2>/dev/null || true
+  tmux set-hook -gu pane-focus-in       2>/dev/null || true
 fi
 
 echo "✅ 已卸载 cc-window-hud（tmux 底栏 + wrapper 已撤，watcher 已停）"

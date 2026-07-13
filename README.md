@@ -46,6 +46,7 @@ source ~/.zshrc     # 或重开 shell
 
 1. 往 `~/.tmux.conf` 写底栏配置（`status-right` 调 `cc-hud-title` + `status-interval 5`）
 2. 往 shell profile 写 `claude` / `codex` wrapper —— 启动时后台挂一个只盯本窗的 `cc-watch`
+3. 往 `~/.tmux.conf` 写 tmux hook（新窗 / 切窗 / 聚焦时兜底挂 watcher）—— 覆盖 wrapper 之外的启动方式（IDE 插件、绝对路径等）；watcher 幂等，非 cc/codex 窗自退
 
 装完之后：**开 cc 或 codex → 自动挂 watcher（4s 刷红绿灯）+ tmux 自动刷底栏**，全程无需手动。
 
@@ -79,6 +80,13 @@ $XDG_CACHE_HOME/cc-window-hud/title/<base>.txt      # 内容 = 该任务的真�
 ## 依赖
 
 `tmux` + `bash` + `awk` + `grep`。macOS / Linux 通用。
+
+## 已知限制
+
+- **状态判定基于 TUI 文案**：红绿灯靠匹配 CC/Codex 界面的运行标志（`esc to interrupt`）与确认菜单结构。上游若大改界面文案，判定可能需跟着更新——改 `bin/cc-watch` 的 `*_glyph` 函数即可，与其它部分解耦。
+- **未命名窗重名**：没手动命名的 cc 窗，窗名默认取命令名（多个都显示 `🟡 claude`）。给窗起名即可区分（base 由你/调度层定，cc-watch 只加字形）。
+- **自启覆盖面**：wrapper 覆盖命令行启动 + tmux hook 覆盖新窗/切窗；已开的旧 shell 需 `source` 一次，极特殊启动方式可手动 `cc-watch &`。
+- **每窗一进程**：去中心化的取舍——N 个 cc 窗 = N 个 bash（实测每个 ~2MB、%CPU≈0、零 token）。要单进程可改集中式，但会牺牲「窗关自退 / 零抢名」的简洁。
 
 ## License
 

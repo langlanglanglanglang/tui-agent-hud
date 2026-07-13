@@ -47,8 +47,12 @@ pick_agent() {
 #         卡住=注入命令卡输入框未提交（❯ 请 Read ...prompt/*.md）；否则等输入。
 claude_glyph() {
   local t="$1"
-  printf '%s' "$t" | grep -qE '…[[:space:]]*\([0-9]|esc to interrupt' && { echo "🟢"; return; }
-  printf '%s' "$t" | grep -qE '❯[[:space:]]*请[[:space:]]*Read[[:space:]]+[^ ]*prompt/[^ ]*\.md' && { echo "🔴"; return; }
+  # 🟢 在跑：CC 执行时底部稳定出现 "esc to interrupt"（跨版本一致的运行标志）
+  printf '%s' "$t" | grep -qE 'esc to interrupt' && { echo "🟢"; return; }
+  # 🔴 需你处理：权限确认框 / 选择菜单在等你——靠 TUI 结构标志判断（不匹配对话正文，避免误判）：
+  #    "Enter to confirm/select" / "Do you want to…" / "❯ 1." 选项菜单 / "Press Enter" 等
+  printf '%s' "$t" | grep -qE 'Enter to (confirm|continue|select)|to confirm ·| to select|❯ +1\.|Do you want to|Allow this|[Pp]ress Enter to' && { echo "🔴"; return; }
+  # 🟡 其它：空闲等你输入
   echo "🟡"
 }
 
@@ -59,6 +63,18 @@ codex_glyph() {
   printf '%s' "$t" | grep -qiE 'Do you want to (run|execute|allow|continue)|Allow command|Approve command|approval required|requires approval|Proceed\?|Continue\?|Trust this (workspace|directory)|login required|Select an option' && { echo "🔴"; return; }
   echo "🟡"
 }
+
+# 自检：本 pane 在跑 cc/codex 吗？否则退出——供 tmux hook 无脑对任意新窗/切窗调用，
+# 纯 shell 窗被挂上来也会立刻自退，不浪费进程。
+is_cc_pane() {
+  local c cap
+  c=$(pane_cmd | tr '[:upper:]' '[:lower:]')
+  case "$c" in *claude*|*codex*|node) return 0 ;; esac
+  cap=$(tmux capture-pane -p -t "$PANE" 2>/dev/null)
+  printf '%s' "$cap" | grep -qE 'Claude Code|bypass permissions|OpenAI Codex|esc to interrupt' && return 0
+  return 1
+}
+is_cc_pane || exit 0
 
 # 主循环：pane 存活期间刷；pane 消失（窗口关）→ while 条件失败 → 退出 → trap 清 pidfile
 while tmux display-message -t "$PANE" -p '#{pane_id}' >/dev/null 2>&1; do

@@ -26,6 +26,10 @@ cat >> "$TMUXCONF" <<EOF
 set -g status-right-length 90
 set -g status-interval 5
 set -g status-right ' #[fg=black]#($BIN/cc-hud-title)#[default]   %H:%M'
+# 兜底自启（wrapper 之外）：新窗/切窗/聚焦时确保当前窗挂 watcher；幂等，非 cc/codex 窗自退
+set-hook -g after-new-window    'run-shell -b "$BIN/cc-watch #{pane_id}"'
+set-hook -g after-select-window 'run-shell -b "$BIN/cc-watch #{pane_id}"'
+set-hook -g pane-focus-in       'run-shell -b "$BIN/cc-watch #{pane_id}"'
 # $MARKEND
 EOF
 

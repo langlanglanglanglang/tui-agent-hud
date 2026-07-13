@@ -22,7 +22,7 @@ pkill -f 'agent-watch'   2>/dev/null || true
 rm -rf "$STATE_DIR/pid"
 
 # 复位 tmux 底栏（清 status-right 里的脚本调用）
-if [ -n "${TMUX:-}" ]; then
+if tmux info >/dev/null 2>&1; then
   tmux set -gu status-right 2>/dev/null || true
   tmux set -gu status-interval 2>/dev/null || true
   tmux set-hook -gu after-new-window    2>/dev/null || true

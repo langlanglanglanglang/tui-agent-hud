@@ -53,8 +53,9 @@ codex()  { [ -n "\${TMUX:-}" ] && ( "$BIN/agent-watch" >/dev/null 2>&1 & ); comm
 EOF
 
 # 3) 即时生效 tmux 底栏
-if [ -n "${TMUX:-}" ]; then
-  tmux source-file "$TMUXCONF" 2>/dev/null && echo "✅ tmux 底栏已即时生效"
+# 用 tmux info 检测 server 是否在跑（不依赖 $TMUX 环境变量——它不继承到本安装子进程）
+if tmux info >/dev/null 2>&1; then
+  tmux source-file "$TMUXCONF" 2>/dev/null && echo "✅ tmux 底栏 + hook 已即时生效"
 fi
 echo "✅ wrapper 已装到 ${PROFILE}（兼容 claude + codex）"
 echo "→ 当前 shell 生效：source \"${PROFILE}\""

@@ -3,16 +3,16 @@
 给 tmux 里的 **Claude Code / Codex 多窗口**加一层轻量 HUD：
 
 - **窗口名红绿灯** — 每个窗一眼看出 🟢在跑 / 🟡等你输入 / 🔴卡住需处理
-- **底栏任务概览** — 当前窗显示 `🟡 task-1332 · 后台开单时缺少线索渠道和线索人`（红绿灯 + 编号 + 真实标题）
+- **底栏任务概览** — 当前窗显示 `🟡 fix-login · resolve OAuth redirect loop`（红绿灯 + 编号 + 真实标题）
 
 配合多开 cc/codex 跑并行任务时，一眼看清哪个窗在忙、哪个在等你。
 
 ```
 ┌─ tmux tab ────────────────────────────────┐
-│ 🟢 task-0379   🟡 task-1332   🔴 task-1401 │   ← 窗口名红绿灯（agent-watch 维护）
+│ 🟢 build-api   🟡 fix-login   🔴 run-tests │   ← 窗口名红绿灯（agent-watch 维护）
 └────────────────────────────────────────────┘
  ...
- 🟡 task-1332 · 后台开单时缺少线索渠道和线索人   14:32   ← 底栏概览（agent-hud-title）
+ 🟡 fix-login · resolve OAuth redirect loop   14:32   ← 底栏概览（agent-hud-title）
 ```
 
 ## 设计：去中心化自监听
@@ -36,8 +36,8 @@
 ## 安装
 
 ```bash
-git clone <repo> ~/WorkSpace/tui-agent-hud
-cd ~/WorkSpace/tui-agent-hud
+git clone <repo> ~/tui-agent-hud
+cd ~/tui-agent-hud
 ./install.sh
 source ~/.zshrc     # 或重开 shell
 ```
@@ -58,7 +58,7 @@ source ~/.zshrc     # 或重开 shell
 
 ```
 $XDG_CACHE_HOME/tui-agent-hud/title/<base>.txt      # 内容 = 该任务的真实标题
-# 例：echo '后台开单时缺少线索渠道和线索人' > ~/.cache/tui-agent-hud/title/task-1332.txt
+# 例：echo 'resolve OAuth redirect loop' > ~/.cache/tui-agent-hud/title/fix-login.txt
 ```
 
 写了缓存，底栏就显示真实标题；没写就回退 claude/codex 自己的 `pane_title`。这样项目本身不含任何业务逻辑，业务侧（如飞书任务系统）只需在起窗时写一个标题文件即可接入。

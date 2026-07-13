@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# cc-watch — 单窗自监听（去中心化）。
+#
+# 每个 Claude Code / Codex 交互窗口旁挂一个 cc-watch，**只盯自己这一个 pane**：
+#   - capture 自己 → 判 🟢在跑 / 🟡等输入 / 🔴卡住 → rename 自己的 window
+#   - 自己的 pane 关闭 → 自动退出（无孤儿、无跨窗、无抢名）
+#
+# 与集中式轮询器的区别：不遍历 session 全窗、只改自己那一个窗名，
+# 所以多窗并存时天然零冲突（每个只动自己的 window_name）。
+#
+# 用法：
+#   cc-watch [pane_id]          # 缺省用 $TMUX_PANE（由启动它的窗口注入）
+# 环境变量：
+#   CC_HUD_INTERVAL   轮询间隔秒，默认 4
+#   CC_HUD_AGENT      claude | codex | auto，默认 auto（按 pane_current_command 猜）
+set -uo pipefail
+
+PANE="${1:-${TMUX_PANE:-}}"
+[ -z "$PANE" ] && { echo "cc-watch: 无 pane（设 \$TMUX_PANE 或传 pane id）" >&2; exit 1; }
+
+INTERVAL="${CC_HUD_INTERVAL:-4}"
+AGENT="${CC_HUD_AGENT:-auto}"
+STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/cc-window-hud"
+PID_DIR="$STATE_DIR/pid"
+mkdir -p "$PID_DIR"
+
+# 幂等：同一 pane 已有存活 watcher → 直接退出（防 SessionStart hook 重复起）
+PIDF="$PID_DIR/$(printf '%s' "$PANE" | tr -c 'A-Za-z0-9' '_').pid"
+if [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF" 2>/dev/null)" 2>/dev/null; then
+  exit 0
+fi
+echo $$ > "$PIDF"
+trap 'rm -f "$PIDF"' EXIT INT TERM
+
+pane_cmd() { tmux display-message -t "$PANE" -p '#{pane_current_command}' 2>/dev/null; }
+
+pick_agent() {
+  [ "$AGENT" != "auto" ] && { echo "$AGENT"; return; }
+  local c; c=$(pane_cmd | tr '[:upper:]' '[:lower:]')
+  case "$c" in
+    *codex*|node) echo codex ;;   # npm 全局 codex 在 tmux 里常显示为 node
+    *)            echo claude ;;
+  esac
+}
+
+# claude：在跑=活动 spinner「…（数字」或「esc to interrupt」；
+#         卡住=注入命令卡输入框未提交（❯ 请 Read ...prompt/*.md）；否则等输入。
+claude_glyph() {
+  local t="$1"
+  printf '%s' "$t" | grep -qE '…[[:space:]]*\([0-9]|esc to interrupt' && { echo "🟢"; return; }
+  printf '%s' "$t" | grep -qE '❯[[:space:]]*请[[:space:]]*Read[[:space:]]+[^ ]*prompt/[^ ]*\.md' && { echo "🔴"; return; }
+  echo "🟡"
+}
+
+# codex：在跑=「Working (数字」/「esc to interrupt」；卡住=审批/信任/登录/选择提示。
+codex_glyph() {
+  local t="$1"
+  printf '%s' "$t" | grep -qiE 'Working[[:space:]]*\([0-9]|esc to interrupt|Ctrl-C to stop' && { echo "🟢"; return; }
+  printf '%s' "$t" | grep -qiE 'Do you want to (run|execute|allow|continue)|Allow command|Approve command|approval required|requires approval|Proceed\?|Continue\?|Trust this (workspace|directory)|login required|Select an option' && { echo "🔴"; return; }
+  echo "🟡"
+}
+
+# 主循环：pane 存活期间刷；pane 消失（窗口关）→ while 条件失败 → 退出 → trap 清 pidfile
+while tmux display-message -t "$PANE" -p '#{pane_id}' >/dev/null 2>&1; do
+  win=$(tmux display-message -t "$PANE" -p '#{window_id}' 2>/dev/null)  || break
+  name=$(tmux display-message -t "$PANE" -p '#{window_name}' 2>/dev/null) || break
+  # 剥前导字形 + 取核心 base（兼容历史 base·xxx 格式）
+  base=$(printf '%s' "$name" | sed -E 's/^[🟢🟡🔴][[:space:]]+//; s/·.*//')
+  # 只管 task- / epic-task- 命名的窗；看板 / 普通 shell 窗不碰
+  if printf '%s' "$base" | grep -qE '^(task-[0-9]|epic-task-)'; then
+    ag=$(pick_agent)
+    cap=$(tmux capture-pane -p -t "$PANE" 2>/dev/null || true)
+    if [ "$ag" = codex ]; then g=$(codex_glyph "$cap"); else g=$(claude_glyph "$cap"); fi
+    newname="$g $base"
+    [ "$newname" != "$name" ] && tmux rename-window -t "$win" "$newname" 2>/dev/null
+  fi
+  sleep "$INTERVAL"
+done

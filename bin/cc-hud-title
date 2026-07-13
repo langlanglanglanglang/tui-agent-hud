@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# cc-hud-title — 底栏概览。输出当前 active window 的「<红绿灯> <base> · <标题>」。
+#
+# 红绿灯 + base 来自 window_name（cc-watch 维护，稳定）。
+# 标题三级回退：
+#   1) 标题缓存 $XDG_CACHE_HOME/cc-window-hud/title/<base>.txt
+#      —— 约定目录：任何集成方都可往里写真实标题（如 cyj-todo 写飞书任务标题）
+#   2) claude/codex 的 pane_title（去掉前导 spinner 字形）
+#
+# 用于 tmux status-right：
+#   set -g status-right ' #(~/WorkSpace/cc-window-hud/bin/cc-hud-title) '
+#   set -g status-interval 5
+STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/cc-window-hud"
+TITLE_DIR="$STATE_DIR/title"
+
+# $1 仅供调试（模拟 window_name）；正常由 tmux 对当前 active window 求值
+name="${1:-$(tmux display-message -p '#{window_name}' 2>/dev/null)}"
+base=$(printf '%s' "$name" | grep -oE '(epic-task-[0-9]+|task-[0-9]+)' | head -1)
+glyph=$(printf '%s' "$name" | grep -oE '^[🟢🟡🔴]' | head -1)
+
+# 非任务窗（看板 / 普通 shell）→ 直接显示 pane_title
+if [ -z "$base" ]; then
+  tmux display-message -p '#{pane_title}' 2>/dev/null
+  exit 0
+fi
+
+title=""
+# 1) 标题缓存（约定目录）
+[ -f "$TITLE_DIR/$base.txt" ] && title=$(cat "$TITLE_DIR/$base.txt")
+# 2) 回退 pane_title 去前导 spinner
+if [ -z "$title" ]; then
+  pt=$(tmux display-message -p '#{pane_title}' 2>/dev/null)
+  title=$(printf '%s' "$pt" | sed -E 's/^[^ ]+ //')
+fi
+
+printf '%s %s · %s' "$glyph" "$base" "$title"

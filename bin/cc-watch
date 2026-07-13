@@ -47,8 +47,11 @@ pick_agent() {
 #         卡住=注入命令卡输入框未提交（❯ 请 Read ...prompt/*.md）；否则等输入。
 claude_glyph() {
   local t="$1"
-  # 🟢 在跑：CC 执行时底部稳定出现 "esc to interrupt"（跨版本一致的运行标志）
-  printf '%s' "$t" | grep -qE 'esc to interrupt' && { echo "🟢"; return; }
+  # 🟢 在跑：CC 运行时底部 spinner「<Word>… (Ns …」/ "esc to interrupt" / API 重试。
+  # ⚠️ 不能只认 esc to interrupt——它常被 spinner 行取代或挤出可见区；spinner 的
+  #    「… (数字」才是最稳的运行标志（Waddling… (21m / Cerebrating… (12s / Brewing…）。
+  #    "Brewed for" 是**完成**态（跑完等输入），不算在跑，别误匹配。
+  printf '%s' "$t" | grep -qE '…[[:space:]]*\([0-9]|esc to interrupt|Retrying in [0-9]' && { echo "🟢"; return; }
   # 🔴 需你处理：权限确认框 / 选择菜单在等你——靠 TUI 结构标志判断（不匹配对话正文，避免误判）：
   #    "Enter to confirm/select" / "Do you want to…" / "❯ 1." 选项菜单 / "Press Enter" 等
   printf '%s' "$t" | grep -qE 'Enter to (confirm|continue|select)|to confirm ·| to select|❯ +1\.|Do you want to|Allow this|[Pp]ress Enter to' && { echo "🔴"; return; }

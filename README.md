@@ -49,7 +49,7 @@ source ~/.zshrc     # 或重开 shell
 
 装完之后：**开 cc 或 codex → 自动挂 watcher（4s 刷红绿灯）+ tmux 自动刷底栏**，全程无需手动。
 
-> 前提：窗口名需是 `task-XXXX` / `epic-task-XXXX` 才刷红绿灯（普通 shell / 看板窗不碰）。命名由你的调度层负责（见「集成」）。
+> 范围：**所有经 wrapper 启动的 cc/codex 窗**都刷红绿灯（不限窗名——`task-XXXX` 调度窗、`workflow` 等自命名窗都刷；纯 shell 窗不经 wrapper、不挂 watcher，自然不刷）。窗名 base 由你自己或调度层设定，cc-watch 只在前面加/换字形。
 
 ## 集成：接入真实任务标题
 

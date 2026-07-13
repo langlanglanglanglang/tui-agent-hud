@@ -66,8 +66,9 @@ while tmux display-message -t "$PANE" -p '#{pane_id}' >/dev/null 2>&1; do
   name=$(tmux display-message -t "$PANE" -p '#{window_name}' 2>/dev/null) || break
   # 剥前导字形 + 取核心 base（兼容历史 base·xxx 格式）
   base=$(printf '%s' "$name" | sed -E 's/^[🟢🟡🔴][[:space:]]+//; s/·.*//')
-  # 只管 task- / epic-task- 命名的窗；看板 / 普通 shell 窗不碰
-  if printf '%s' "$base" | grep -qE '^(task-[0-9]|epic-task-)'; then
+  # 对本窗刷红绿灯。cc-watch 由 wrapper 只在 cc/codex 窗启动，故无需再按窗名过滤——
+  # 不管窗叫 task-XXXX 还是 workflow / memory 等自定义名，都在原 base 前加/换字形。
+  if [ -n "$base" ]; then
     ag=$(pick_agent)
     cap=$(tmux capture-pane -p -t "$PANE" 2>/dev/null || true)
     if [ "$ag" = codex ]; then g=$(codex_glyph "$cap"); else g=$(claude_glyph "$cap"); fi

@@ -15,10 +15,11 @@ TITLE_DIR="$STATE_DIR/title"
 
 # $1 仅供调试（模拟 window_name）；正常由 tmux 对当前 active window 求值
 name="${1:-$(tmux display-message -p '#{window_name}' 2>/dev/null)}"
-base=$(printf '%s' "$name" | grep -oE '(epic-task-[0-9]+|task-[0-9]+)' | head -1)
 glyph=$(printf '%s' "$name" | grep -oE '^[🟢🟡🔴]' | head -1)
+# base = 剥前导字形 + 去 ·后缀；可为 task-XXXX 或任意自定义窗名（workflow / memory…）
+base=$(printf '%s' "$name" | sed -E 's/^[🟢🟡🔴][[:space:]]+//; s/·.*//; s/[[:space:]]+$//')
 
-# 非任务窗（看板 / 普通 shell）→ 直接显示 pane_title
+# 窗名为空（异常）→ pane_title 兜底
 if [ -z "$base" ]; then
   tmux display-message -p '#{pane_title}' 2>/dev/null
   exit 0

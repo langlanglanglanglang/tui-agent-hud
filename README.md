@@ -35,8 +35,37 @@
 
 ## 安装
 
+### 一键安装（推荐）
+
+复制下面整段执行。首次运行会克隆到 `~/tui-agent-hud`，重复运行会先以
+`--ff-only` 更新，再重新执行幂等安装：
+
 ```bash
-git clone <repo> ~/tui-agent-hud
+bash -c '
+set -e
+repo="https://github.com/langlanglanglanglang/tui-agent-hud.git"
+install_dir="${TUI_AGENT_HUD_DIR:-$HOME/tui-agent-hud}"
+
+if [ -d "$install_dir/.git" ]; then
+  git -C "$install_dir" pull --ff-only
+elif [ -e "$install_dir" ]; then
+  echo "安装目录已存在且不是 Git 仓库：$install_dir" >&2
+  exit 1
+else
+  git clone "$repo" "$install_dir"
+fi
+
+"$install_dir/install.sh"
+'
+```
+
+安装完成后重开 shell，或按脚本最后的提示 `source` 当前 shell profile。
+如需自定义安装目录，可在命令前设置 `TUI_AGENT_HUD_DIR=/path/to/tui-agent-hud`。
+
+### 手动安装
+
+```bash
+git clone https://github.com/langlanglanglanglang/tui-agent-hud.git ~/tui-agent-hud
 cd ~/tui-agent-hud
 ./install.sh
 source ~/.zshrc     # 或重开 shell
@@ -79,7 +108,7 @@ $XDG_CACHE_HOME/tui-agent-hud/title/<base>.txt      # 内容 = 该任务的真�
 
 ## 依赖
 
-`tmux` + `bash` + `awk` + `grep`。macOS / Linux 通用。
+`git` + `tmux` + `bash` + `awk` + `grep`。macOS / Linux 通用。
 
 ## 已知限制
 

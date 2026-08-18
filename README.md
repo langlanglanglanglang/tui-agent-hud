@@ -3,7 +3,7 @@
 给 tmux 里的 **Claude Code / Codex 多窗口**加一层轻量 HUD：
 
 - **窗口名红绿灯** — 每个窗一眼看出 🟢在跑 / 🟡等你输入 / 🔴卡住需处理
-- **底栏任务概览** — 当前窗显示 `🟡 fix-login · resolve OAuth redirect loop`（红绿灯 + 编号 + 真实标题）
+- **底栏任务详情** — 当前窗仅显示 `resolve OAuth redirect loop`（真实标题）
 
 配合多开 cc/codex 跑并行任务时，一眼看清哪个窗在忙、哪个在等你。
 
@@ -12,7 +12,7 @@
 │ 🟢 build-api   🟡 fix-login   🔴 run-tests │   ← 窗口名红绿灯（agent-watch 维护）
 └────────────────────────────────────────────┘
  ...
- 🟡 fix-login · resolve OAuth redirect loop   14:32   ← 底栏概览（agent-hud-title）
+ resolve OAuth redirect loop                   14:32   ← 底栏详情（agent-hud-title）
 ```
 
 ## 设计：去中心化自监听
@@ -31,7 +31,7 @@
 | 跨 session | 需每 session 起一个 | ✅ 不存在——每个只认自己的 pane |
 | cc / codex | — | ✅ 都兼容（自动识别） |
 
-底栏概览由 tmux 内建 `status-right` 每 5s 渲染，无独立进程。
+底栏详情由 tmux 内建 `status-right` 每 5s 渲染，无独立进程。红绿灯和任务编号只保留在窗口标签中，底栏不重复展示。
 
 ## 安装
 
@@ -103,7 +103,7 @@ $XDG_CACHE_HOME/tui-agent-hud/title/<base>.txt      # 内容 = 该任务的真�
 | 文件 | 作用 |
 |---|---|
 | `bin/agent-watch` | 单窗自监听：盯自己 pane、刷自己窗名红绿灯、窗关自退 |
-| `bin/agent-hud-title` | 底栏概览：红绿灯 + 编号 + 标题（缓存→pane_title） |
+| `bin/agent-hud-title` | 底栏详情：仅标题（缓存→pane_title） |
 | `install.sh` / `uninstall.sh` | 幂等安装 / 卸载 |
 
 ## 依赖

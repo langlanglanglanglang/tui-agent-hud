@@ -22,7 +22,7 @@ TMUXCONF="$HOME/.tmux.conf"
 strip_block "$TMUXCONF"
 cat >> "$TMUXCONF" <<EOF
 # $MARK
-# 底栏显示当前窗「红绿灯 + 编号 + 任务标题」；红绿灯由每窗 agent-watch 自监听维护
+# 底栏仅显示当前窗任务标题；红绿灯 + 编号保留在窗口标签中
 set -g status-right-length 90
 set -g status-interval 5
 set -g status-right ' #[fg=black]#($BIN/agent-hud-title)#[default]   %H:%M'

@@ -9,6 +9,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BIN="$ROOT/bin"
 MARK=">>> tui-agent-hud >>>"
 MARKEND="<<< tui-agent-hud <<<"
+STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tui-agent-hud"
 
 # 删掉文件里旧的 tui-agent-hud 块（含边界行）——awk 实现，跨 GNU/BSD 可移植
 strip_block() {
@@ -52,11 +53,19 @@ codex()  { [ -n "\${TMUX:-}" ] && ( "$BIN/agent-watch" >/dev/null 2>&1 & ); comm
 # $MARKEND
 EOF
 
-# 3) 即时生效 tmux 底栏
+# 3) 清理升级前残留 watcher。旧版本会吞掉 TERM，stop 脚本会兜底强制结束。
+"$BIN/stop-agent-watchers"
+rm -rf "$STATE_DIR/pid"
+
+# 4) 即时生效 tmux 底栏，并为现有 cc/codex pane 启动唯一 watcher
 # 用 tmux info 检测 server 是否在跑（不依赖 $TMUX 环境变量——它不继承到本安装子进程）
 if tmux info >/dev/null 2>&1; then
   tmux source-file "$TMUXCONF" 2>/dev/null && echo "✅ tmux 底栏 + hook 已即时生效"
+  while IFS= read -r pane; do
+    # 交给长期存活的 tmux server 托管，避免安装 shell 结束时给后台 watcher 发 HUP。
+    tmux run-shell -b "\"$BIN/agent-watch\" \"$pane\""
+  done < <(tmux list-panes -a -F '#{pane_id}')
 fi
 echo "✅ wrapper 已装到 ${PROFILE}（兼容 claude + codex）"
 echo "→ 当前 shell 生效：source \"${PROFILE}\""
-echo "→ 已开的 cc/codex 窗要挂上监听：在该窗跑一次  $BIN/agent-watch &"
+echo "→ 已开的 cc/codex 窗已自动挂上监听"

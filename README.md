@@ -20,7 +20,7 @@
 每个 cc/codex 窗口**旁挂一个 `agent-watch`，只盯自己这一个 pane**：
 
 - capture 自己 → 判红绿灯 → rename **自己**的窗
-- 自己的窗口关闭 → watcher 自动退出（无孤儿）
+- 自己的窗口关闭 → watcher 自动退出；同一 pane 使用原子锁，始终只有一个 watcher
 
 没有集中轮询器，所以：
 
@@ -75,7 +75,8 @@ source ~/.zshrc     # 或重开 shell
 
 1. 往 `~/.tmux.conf` 写底栏配置（`status-right` 调 `agent-hud-title` + `status-interval 5`）
 2. 往 shell profile 写 `claude` / `codex` wrapper —— 启动时后台挂一个只盯本窗的 `agent-watch`
-3. 往 `~/.tmux.conf` 写 tmux hook（新窗 / 切窗 / 聚焦时兜底挂 watcher）—— 覆盖 wrapper 之外的启动方式（IDE 插件、绝对路径等）；watcher 幂等，非 cc/codex 窗自退
+3. 往 `~/.tmux.conf` 写 tmux hook（新窗 / 切窗 / 聚焦时兜底挂 watcher）—— 覆盖 wrapper 之外的启动方式（IDE 插件、绝对路径等）；watcher 用原子锁保证每个 pane 只有一个实例，非 cc/codex 窗自退
+4. 升级时清理旧 watcher，并自动为已经打开的 cc/codex pane 重新挂载监听
 
 装完之后：**开 cc 或 codex → 自动挂 watcher（4s 刷红绿灯）+ tmux 自动刷底栏**，全程无需手动。
 
@@ -104,6 +105,7 @@ $XDG_CACHE_HOME/tui-agent-hud/title/<base>.txt      # 内容 = 该任务的真�
 |---|---|
 | `bin/agent-watch` | 单窗自监听：盯自己 pane、刷自己窗名红绿灯、窗关自退 |
 | `bin/agent-hud-title` | 底栏详情：仅标题（缓存→pane_title） |
+| `bin/stop-agent-watchers` | 安装、升级、卸载时可靠停止 watcher（兼容旧版本） |
 | `install.sh` / `uninstall.sh` | 幂等安装 / 卸载 |
 
 ## 依赖

@@ -5,6 +5,8 @@ set -uo pipefail
 MARK=">>> tui-agent-hud >>>"
 MARKEND="<<< tui-agent-hud <<<"
 STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tui-agent-hud"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BIN="$ROOT/bin"
 
 strip_block() {
   local f="$1"; [ -f "$f" ] || return 0
@@ -17,8 +19,7 @@ for f in "$HOME/.tmux.conf" "${ZDOTDIR:-$HOME}/.zshrc" "$HOME/.bashrc" "$HOME/.p
 done
 
 # 停所有 agent-watch 进程
-pkill -f "$STATE_DIR" 2>/dev/null || true
-pkill -f 'agent-watch'   2>/dev/null || true
+"$BIN/stop-agent-watchers"
 rm -rf "$STATE_DIR/pid"
 
 # 复位 tmux 底栏（清 status-right 里的脚本调用）

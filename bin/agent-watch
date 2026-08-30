@@ -24,13 +24,49 @@ STATE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/tui-agent-hud"
 PID_DIR="$STATE_DIR/pid"
 mkdir -p "$PID_DIR"
 
-# 幂等：同一 pane 已有存活 watcher → 直接退出（防 SessionStart hook 重复起）
-PIDF="$PID_DIR/$(printf '%s' "$PANE" | tr -c 'A-Za-z0-9' '_').pid"
-if [ -f "$PIDF" ] && kill -0 "$(cat "$PIDF" 2>/dev/null)" 2>/dev/null; then
+# 幂等：同一 pane 只允许一个 watcher。
+# 符号链接的创建是原子操作，且目标值同时记录 owner PID，没有「建锁后再写 PID」的窗口。
+PANE_KEY=$(printf '%s' "$PANE" | tr -c 'A-Za-z0-9' '_')
+LOCK="$PID_DIR/$PANE_KEY.lock"
+
+live_watcher() {
+  local pid="${1:-}" cmd
+  case "$pid" in ''|*[!0-9]*) return 1 ;; esac
+  kill -0 "$pid" 2>/dev/null || return 1
+  cmd=$(ps -p "$pid" -o command= 2>/dev/null) || return 1
+  case "$cmd" in *'/agent-watch'|*'/agent-watch '*) return 0 ;; esac
+  return 1
+}
+
+acquire_lock() {
+  local owner stale
+  while ! ln -s "$$" "$LOCK" 2>/dev/null; do
+    owner=$(readlink "$LOCK" 2>/dev/null || true)
+    live_watcher "$owner" && return 1
+
+    # 原子移走确认无主的锁；并发恢复者只有一个能成功。
+    stale="$LOCK.stale.$$"
+    mv "$LOCK" "$stale" 2>/dev/null && rm -f "$stale"
+  done
+  return 0
+}
+
+acquire_lock || exit 0
+
+cleanup_lock() {
+  local owner
+  owner=$(readlink "$LOCK" 2>/dev/null || true)
+  [ "$owner" = "$$" ] || return 0
+  rm -f "$LOCK"
+}
+
+SLEEP_PID=""
+shutdown() {
+  [ -z "$SLEEP_PID" ] || kill "$SLEEP_PID" 2>/dev/null || true
   exit 0
-fi
-echo $$ > "$PIDF"
-trap 'rm -f "$PIDF"' EXIT INT TERM
+}
+trap cleanup_lock EXIT
+trap shutdown HUP INT TERM
 
 pane_cmd() { tmux display-message -t "$PANE" -p '#{pane_current_command}' 2>/dev/null; }
 
@@ -105,5 +141,9 @@ while tmux display-message -t "$PANE" -p '#{pane_id}' >/dev/null 2>&1; do
     newname="$g $base"
     [ "$newname" != "$name" ] && tmux rename-window -t "$win" "$newname" 2>/dev/null
   fi
-  sleep "$INTERVAL"
+  # 后台 sleep + wait 让 HUP/INT/TERM 能立即打断等待并执行退出 trap。
+  sleep "$INTERVAL" &
+  SLEEP_PID=$!
+  wait "$SLEEP_PID" 2>/dev/null || true
+  SLEEP_PID=""
 done

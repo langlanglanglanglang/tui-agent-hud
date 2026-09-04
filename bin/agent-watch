@@ -95,12 +95,15 @@ claude_glyph() {
   echo "🟡"
 }
 
-# codex：在跑=「Working (数字」/「esc to interrupt」；卡住=审批/信任/登录/选择提示。
+# codex：在跑=「Working (数字」/等待后台终端/「esc to interrupt」；卡住=审批/信任/登录/选择提示。
 codex_glyph() {
   local t="$1"
   local tail_text
   tail_text=$(printf '%s\n' "$t" | tail -n 12)
   printf '%s' "$t" | grep -qiE 'Working[[:space:]]*\([0-9]|esc to interrupt|Ctrl-C to stop' && { echo "🟢"; return; }
+  # 等待长时间运行的后台终端时，Codex 仍在执行任务。只匹配底部状态行的项目符号，
+  # 避免用户或助手在对话正文中提到同一句文案时把空闲态误判为运行态。
+  printf '%s\n' "$tail_text" | grep -qiE '^[[:space:]]*•[[:space:]]+Waiting for background terminal' && { echo "🟢"; return; }
   printf '%s' "$t" | grep -qiE 'Do you want to (run|execute|allow|continue)|Allow command|Approve command|approval required|requires approval|Proceed\?|Continue\?|Trust this (workspace|directory)|login required|Select an option' && { echo "🔴"; return; }
   # Codex 新版命令审批框会显示 “Would you like to run the following command?”。
   # 该句也可能被普通对话引用，因此同时要求 pane 底部仍存在选项和确认提示，
